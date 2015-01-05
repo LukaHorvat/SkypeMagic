@@ -1,0 +1,13 @@
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\SkypeMagic.exe.config
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\SkypeMagic.exe
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\SkypeMagic.pdb
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.csprojResolveAssemblyReference.cache
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.exe
+c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.pdb
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.Linq.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\EntityFramework.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.EF6.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.pdb
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.EF6.pdb
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Data.SQLite.Linq.pdb
