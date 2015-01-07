@@ -4,3 +4,7 @@ c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\De
 c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.csprojResolveAssemblyReference.cache
 c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.exe
 c:\users\luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\obj\Debug\SkypeMagic.pdb
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Collections.Immutable.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Reflection.Metadata.dll
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Collections.Immutable.xml
+C:\Users\Luka\documents\visual studio 2015\Projects\SkypeMagic\SkypeMagic\bin\Debug\System.Reflection.Metadata.xml

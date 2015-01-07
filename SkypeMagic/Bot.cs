@@ -1,7 +1,9 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -11,90 +13,95 @@ namespace SkypeMagic
 {
     class Bot
     {
+        Persist persist;
         Skype skype;
+        Dictionary<string, Action<string[]>> scripts;
+        List<Action<Message>> rawScripts;
 
         public Bot(Persist persist)
         {
             var db = File.Exists(@"C:\Users\Luka\AppData\Roaming\Skype\luka.horvat2\main.db") ? @"C:\Users\Luka\AppData\Roaming\Skype\luka.horvat2\main.db" : @"C:\Users\Administrator\AppData\Roaming\Skype\gacar.bot\main.db";
             var conv = Console.ReadLine();
             skype = new Skype(db, conv);
+            this.persist = persist;
+
+            scripts = new Dictionary<string, Action<string[]>>();
+            rawScripts = new List<Action<Message>>();
+            var watcher = new FileSystemWatcher("scripts");
+            watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime;
+            watcher.EnableRaisingEvents = true;
+            watcher.Created += Recompile;
+            watcher.Changed += Recompile;
+            watcher.Deleted += Recompile;
+            watcher.Renamed += Recompile;
+            Recompile(null, null);
+
             skype.OnMessage += delegate (Message msg)
             {
                 persist.Log.Add(msg);
+                foreach (var scr in rawScripts) scr(msg);
                 if (msg.Sender == "gacar.bot") return;
-                if (msg.Text == "!gacar introduce") skype.SendMessageToConv("Bok. Ja sam jebeni bot");
-                if (msg.Text.StartsWith("!wiki ")) skype.SendMessageToConv(Wiki.SearchWiki(msg.Text.Substring("!wiki ".Length)));
-                if (msg.Text.StartsWith("!youtube ")) skype.SendMessageToConv(YouTube.SearchYouTube(msg.Text.Substring("!youtube".Length)));
-                if (msg.Text.StartsWith("!votekick "))
-                {
-                    var name = msg.Text.Substring("!votekick ".Length);
-                    skype.SendMessageToConv("Otvorena minuta za glasanje za '/kick " + name + "'. Potrebno " + votesToKick + " glasova. Napisi '!yes' da glasaš.");
-                    Fork(60, Tuple.Create(name, new SortedSet<string>(), false), VoteKick, _ => skype.SendMessageToConv("Isteklo vrijeme za glasanje"));
-                }
-                if (msg.Text.StartsWith("!ghci ")) GHCi.SendCode(msg.Text.Substring("!ghci ".Length), str => skype.SendMessageToConv(" " + str));
-                if (msg.Text.Contains("http")) persist.Links.Add(msg);
-                if (msg.Text.StartsWith("!links"))
-                {
-                    skype.SendMessageToConv("Zadnjih 10 poslanih linkova:");
-                    foreach (var link in persist.Links.Reverse<Message>().Take(10).Reverse()) SendMessageLog(link);
-                }
-                if (msg.Text.StartsWith("!phone "))
-                {
-                    var person = msg.Text.Substring("!phone ".Length);
-                    if (person == "svi") skype.SendMessageToConv(File.ReadAllText("phones.txt"));
-                    var numbers = File.ReadAllLines("phones.txt");
-                    foreach (var line in numbers)
-                    {
-                        var nameNum = line.Split(' ');
-                        if (nameNum[0].Split('|').Contains(person)) skype.SendMessageToConv("Broj od " + person + " je " + nameNum[1]);
-                    }
-                }
+                var match = Regex.Match(msg.Text, @"!(\w*)(.*)");
+                if (!match.Success) return;
+                if (scripts.ContainsKey(match.Groups[1].Value)) scripts[match.Groups[1].Value](match.Groups[2].Value.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
             };
         }
 
-        int votesToKick = 4;
-        public Tuple<string, SortedSet<string>, bool> VoteKick(Message msg, Tuple<string, SortedSet<string>, bool> votes)
+        public void Recompile(object t, FileSystemEventArgs args)
         {
-            if (votes.Item3) return votes;
-            if (msg.Text == "!yes")
+            var provider = CodeDomProvider.CreateProvider("CSharp");
+            var parameters = new CompilerParameters(new[] { "System.dll", "System.Core.dll", "System.Data.dll", "System.Net.dll", "System.Xml.dll", "System.Xml.Linq.dll", "System.Reflection.Metadata.dll", "SkypeMagic.exe" });
+            parameters.GenerateExecutable = false;
+            parameters.GenerateInMemory = true;
+
+            var res = provider.CompileAssemblyFromFile(parameters, Directory.GetFiles("scripts"));
+            foreach (CompilerError err in res.Errors) Console.WriteLine(err);
+            if (res.Errors.Count > 0) return;
+            var types = res.CompiledAssembly.DefinedTypes.Where(type => type.IsSubclassOf(typeof(Script)));
+            var methods = types.SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly));
+            scripts.Clear();
+            foreach (var info in methods)
             {
-                if (votes.Item2.Contains(msg.Sender)) return votes;
-                votes.Item2.Add(msg.Sender);
-                skype.SendMessageToConv(votes.Item2.Count + "/" + votesToKick + " za '/kick " + votes.Item1 + "'");
-                if (votes.Item2.Count >= votesToKick)
-                {
-                    skype.SendMessageToConv("/kick " + votes.Item1);
-                    skype.SendMessageToConv("/add " + votes.Item1);
-                    return Tuple.Create(votes.Item1, votes.Item2, true);
-                }
+                if (info.Name == "Raw") rawScripts.Add(msg => info.Invoke(MakeNewObj(info.DeclaringType), new[] { msg }));
+                else scripts.Add(info.Name.ToLower(), MakeScript(info));
             }
-            return votes;
         }
 
-        public void Fork<T>(int seconds, T init, Func<Message, T, T> processor, Action<T> end = null)
+        private Action<string[]> MakeScript(MethodInfo info)
         {
-            Action<Message> del = delegate (Message msg)
+            var types = info.GetParameters().Select(x => x.ParameterType);
+            return (string[] strs) =>
             {
-                init = processor(msg, init);
+                var numArgs = types.Count();
+                if (numArgs > 0 && types.Last() == typeof(string[]))
+                {
+                    strs = strs.Take(numArgs - 1).Concat(new[] { string.Join(" ", strs.Skip(numArgs - 1)) }).ToArray();
+                }
+                if (strs.Count() != types.Count())
+                {
+                    skype.SendMessageToConv("Krivi broj argumenata");
+                    return;
+                }
+                var args = types.Zip<Type, string, object>(strs, (type, str) =>
+                {
+                    if (type == typeof(string)) return str;
+                    if (type == typeof(int)) return int.Parse(str);
+                    if (type == typeof(bool)) return bool.Parse(str);
+                    if (type == typeof(long)) return long.Parse(str);
+                    if (type == typeof(string[])) return str.Split(' ');
+                    skype.SendMessageToConv("Krivi tip argumenta. Očekivan " + type + " za argument " + str);
+                    return null;
+                });
+                var script = MakeNewObj(info.DeclaringType);
+                info.Invoke(script, args.ToArray());
             };
-            skype.OnMessage += del;
-            var timer = new Timer(seconds * 1000);
-            timer.Elapsed += delegate
-            {
-                skype.OnMessage -= del;
-                if (end != null) end(init);
-                timer.Stop();
-            };
-            timer.Start();
         }
 
-        public void SendMessageLog(Message msg)
+        private Script MakeNewObj(Type type)
         {
-            var time = msg.TimeStamp;
-            skype.SendMessageToConv(string.Format("[{0}.{1} {2}:{3} {4}] {5}", 
-                time.Day, time.Month, 
-                time.Hour, time.Minute, 
-                msg.Sender, Regex.Replace(msg.Text, "<.*?>", "")));
+            Script script = (Script)Activator.CreateInstance(type);
+            script.Fill(persist, skype);
+            return script;
         }
     }
 }

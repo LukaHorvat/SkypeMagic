@@ -2,12 +2,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using System.Timers;
 
 namespace SkypeMagic
 {
-    class Skype
+    public class Skype
     {
         string dbPath;
         string convName;
@@ -35,7 +36,7 @@ namespace SkypeMagic
             var timer = new Timer(10 * 60 * 1000);
             timer.Elapsed += delegate
             {
-                WithTextBox(textBox =>
+                WithTextBox(textBox => //To stop Skype from doing idle things
                 {
                     WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.SPACE, null);
                     WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.BACK, null);
@@ -48,8 +49,13 @@ namespace SkypeMagic
         {
             try
             {
-                await Task.Delay(100);
+                await Task.Delay(100); //File is locked when this event fires so we wait for a bit first
                 var res = await conn.QueryAsync<Message>("SELECT timestamp as SkypeTime, author as Sender, body_xml as Text FROM Messages WHERE timestamp > ? ORDER BY id ASC", lastReadTs);
+                foreach (var msg in res)
+                {
+                    msg.Sender = WebUtility.HtmlDecode(msg.Sender);
+                    msg.Text = WebUtility.HtmlDecode(msg.Text);
+                }
 
                 if (OnMessage != null)
                 {
