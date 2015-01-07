@@ -1,23 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SQLite;
+﻿using SQLite;
+using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.IO;
 using System.Threading.Tasks;
 using System.Timers;
 
 namespace SkypeMagic
 {
-    class Skype : IDisposable
+    class Skype
     {
         string dbPath;
         string convName;
-        SQLiteConnection conn;
-        long lastReadId = 0;
+        SQLiteAsyncConnection conn;
+        long lastReadTs = 0;
 
         public Action<Message> OnMessage;
 
@@ -26,41 +21,58 @@ namespace SkypeMagic
             this.dbPath = dbPath;
             this.convName = convName;
 
-            conn = new SQLiteConnection("Data Source=" + dbPath);
-            conn.Open();
+            conn = new SQLiteAsyncConnection(dbPath, SQLiteOpenFlags.ReadOnly | SQLiteOpenFlags.SharedCache | SQLiteOpenFlags.NoMutex);
+            lastReadTs = conn.ExecuteScalarAsync<long>("SELECT timestamp FROM Messages ORDER BY id DESC LIMIT 1").Result;
 
-            var timer = new Timer(1000);
-            timer.Elapsed += delegate { CheckMessages(); };
+            var watcher = new FileSystemWatcher(Path.GetDirectoryName(dbPath), Path.GetFileName(dbPath));
+            watcher.NotifyFilter = NotifyFilters.LastWrite;
+            watcher.EnableRaisingEvents = true;
+            watcher.Changed += delegate (object t, FileSystemEventArgs args)
+            {
+                CheckMessages();
+            };
+
+            var timer = new Timer(10 * 60 * 1000);
+            timer.Elapsed += delegate
+            {
+                WithTextBox(textBox =>
+                {
+                    WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.SPACE, null);
+                    WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.BACK, null);
+                });
+            };
             timer.Start();
         }
 
-        private void CheckMessages()
+        private async void CheckMessages()
         {
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT id, author, body_xml FROM Messages WHERE id > " + lastReadId + " ORDER BY id";
-            var ad = new SQLiteDataAdapter(cmd);
-            var set = new DataSet();
-            ad.Fill(set);
-
-            if (lastReadId != 0)
+            try
             {
-                for (int i = 0; i < set.Tables[0].Rows.Count; ++i)
+                await Task.Delay(100);
+                var res = await conn.QueryAsync<Message>("SELECT timestamp as SkypeTime, author as Sender, body_xml as Text FROM Messages WHERE timestamp > ? ORDER BY id ASC", lastReadTs);
+
+                if (OnMessage != null)
                 {
-                    var row = set.Tables[0].Rows[i];
-                    try
-                    {
-                        if (OnMessage != null) OnMessage(new Message(WebUtility.HtmlDecode((string)row[1]), WebUtility.HtmlDecode((string)row[2])));
-                    }
-                    catch (InvalidCastException)
-                    {
-                        Console.WriteLine("Can't cast to string");
-                    }
+                    foreach (var msg in res) OnMessage(msg);
                 }
+                if (res.Count > 0) lastReadTs = res[res.Count - 1].SkypeTime;
             }
-            if (set.Tables[0].Rows.Count > 0) lastReadId = (long)set.Tables[0].Rows[set.Tables[0].Rows.Count - 1][0];
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
         public void SendMessageToConv(string msg)
+        {
+            WithTextBox(textBox =>
+            {
+                WinAPI.SendMessage(textBox, WinAPI.WM_SETTEXT, 0, msg);
+                WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.RETURN, null);
+            });
+        }
+
+        private void WithTextBox(Action<IntPtr> action)
         {
             try
             {
@@ -69,19 +81,12 @@ namespace SkypeMagic
                 var ctrl = WinAPI.FindWindowEx(conv, IntPtr.Zero, "TChatEntryControl", "");
                 var textBox = WinAPI.FindWindowEx(ctrl, IntPtr.Zero, "TChatRichEdit", "");
 
-                WinAPI.SendMessage(textBox, WinAPI.WM_SETTEXT, 0, msg);
-                WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.RETURN, null);
+                action(textBox);
             }
             catch (IndexOutOfRangeException)
             {
                 Console.WriteLine("Skype is not running");
             }
-        }
-
-        public void Dispose()
-        {
-            conn.Close();
-            conn.Dispose();
         }
     }
 }
