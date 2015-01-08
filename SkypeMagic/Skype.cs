@@ -83,10 +83,11 @@ namespace SkypeMagic
             try
             {
                 var skypeHandle = Process.GetProcessesByName("Skype")[0].MainWindowHandle;
-                var conv = WinAPI.FindWindowEx(skypeHandle, IntPtr.Zero, "TConversationForm", convName);
+                IntPtr conv;
+                conv = WinAPI.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "TConversationForm", convName);
+                if (conv == IntPtr.Zero) conv = WinAPI.FindWindowEx(skypeHandle, IntPtr.Zero, "TConversationForm", convName);
                 var ctrl = WinAPI.FindWindowEx(conv, IntPtr.Zero, "TChatEntryControl", "");
                 var textBox = WinAPI.FindWindowEx(ctrl, IntPtr.Zero, "TChatRichEdit", "");
-
                 action(textBox);
             }
             catch (IndexOutOfRangeException)

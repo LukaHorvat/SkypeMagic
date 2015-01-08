@@ -60,6 +60,7 @@ namespace SkypeMagic
             var types = res.CompiledAssembly.DefinedTypes.Where(type => type.IsSubclassOf(typeof(Script)));
             var methods = types.SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly));
             scripts.Clear();
+            rawScripts.Clear();
             foreach (var info in methods)
             {
                 if (info.Name == "Raw") rawScripts.Add(msg => info.Invoke(MakeNewObj(info.DeclaringType), new[] { msg }));

@@ -40,8 +40,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Base.cs" />
-    <Compile Include="GHCi.cs" />
+    <Compile Include="..\SkypeMagic\bin\Debug\scripts\Base.cs">
+      <Link>Base.cs</Link>
+    </Compile>
+    <Compile Include="..\SkypeMagic\bin\Debug\scripts\GHCi.cs">
+      <Link>GHCi.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
