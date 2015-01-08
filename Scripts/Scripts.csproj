@@ -46,6 +46,12 @@
     <Compile Include="..\SkypeMagic\bin\Debug\scripts\GHCi.cs">
       <Link>GHCi.cs</Link>
     </Compile>
+    <Compile Include="..\SkypeMagic\bin\Debug\scripts\Google.cs">
+      <Link>Google.cs</Link>
+    </Compile>
+    <Compile Include="..\SkypeMagic\bin\Debug\scripts\Stats.cs">
+      <Link>Stats.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -37,6 +38,14 @@ namespace SkypeMagic
         public string Join(string[] args)
         {
             return string.Join(" ", args);
+        }
+        public void SendMessageLog(Message msg)
+        {
+            var time = msg.TimeStamp;
+            Skype.SendMessageToConv(string.Format("[{0}.{1} {2}:{3} {4}] {5}",
+                time.Day, time.Month,
+                time.Hour, time.Minute,
+                msg.Sender, Regex.Replace(msg.Text, "<.*?>", "")));
         }
     }
 }

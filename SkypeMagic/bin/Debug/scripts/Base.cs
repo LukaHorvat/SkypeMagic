@@ -96,12 +96,4 @@ public class Base : Script
         if (match.Success) return match.Groups[1].Value;
         return "Nope";
     }
-    private void SendMessageLog(Message msg)
-    {
-        var time = msg.TimeStamp;
-        Skype.SendMessageToConv(string.Format("[{0}.{1} {2}:{3} {4}] {5}",
-            time.Day, time.Month,
-            time.Hour, time.Minute,
-            msg.Sender, Regex.Replace(msg.Text, "<.*?>", "")));
-    }
 }
