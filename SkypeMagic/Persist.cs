@@ -14,11 +14,13 @@ namespace SkypeMagic
     {
         public List<Message> Log;
         public List<Message> Links;
+        public List<Event> Events;
 
         public Persist()
         {
             Log = new List<Message>();
             Links = new List<Message>();
+            Events = new List<Event>();
         }
     }
 }

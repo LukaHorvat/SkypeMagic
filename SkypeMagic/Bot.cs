@@ -45,6 +45,10 @@ namespace SkypeMagic
                 if (!match.Success) return;
                 if (scripts.ContainsKey(match.Groups[1].Value)) scripts[match.Groups[1].Value](match.Groups[2].Value.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
             };
+            skype.OnLeave += delegate (Leave lv)
+            {
+                skype.SendMessageToConv("/add " + lv.Name);
+            };
         }
 
         public void Recompile(object t, FileSystemEventArgs args)

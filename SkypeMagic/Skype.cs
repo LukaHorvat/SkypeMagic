@@ -5,6 +5,8 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace SkypeMagic
 {
@@ -16,6 +18,10 @@ namespace SkypeMagic
         long lastReadTs = 0;
 
         public Action<Message> OnMessage;
+        public Action<Leave> OnLeave;
+
+        public bool SpamThrottle = true;
+        private List<Tuple<DateTime, string>> spam;
 
         public Skype(string dbPath, string convName)
         {
@@ -43,6 +49,8 @@ namespace SkypeMagic
                 });
             };
             timer.Start();
+
+            spam = new List<Tuple<DateTime, string>>();
         }
 
         private async void CheckMessages()
@@ -51,15 +59,34 @@ namespace SkypeMagic
             {
                 await Task.Delay(100); //File is locked when this event fires so we wait for a bit first
                 var res = await conn.QueryAsync<Message>("SELECT timestamp as SkypeTime, author as Sender, body_xml as Text FROM Messages WHERE timestamp > ? ORDER BY id ASC", lastReadTs);
+                var leaves = await conn.QueryAsync<Leave>("SELECT leavereason as Reason, identities as Name FROM Messages WHERE timestamp > ? ORDER BY id ASC", lastReadTs);
+                res = res.Where(m => m.Text != null).ToList();
+                leaves = leaves.Where(l => l.Reason == 6).ToList();
                 foreach (var msg in res)
                 {
                     msg.Sender = WebUtility.HtmlDecode(msg.Sender);
                     msg.Text = WebUtility.HtmlDecode(msg.Text);
                 }
 
-                if (OnMessage != null)
+                try
                 {
-                    foreach (var msg in res) OnMessage(msg);
+                    if (OnMessage != null)
+                    {
+                        foreach (var msg in res) OnMessage(msg);
+                    }
+                    if (OnLeave != null)
+                    {
+                        foreach (var lv in leaves) OnLeave(lv);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.StackTrace);
+                    while (e != null)
+                    {
+                        Console.WriteLine(e.Message);
+                        e = e.InnerException;
+                    }
                 }
                 if (res.Count > 0) lastReadTs = res[res.Count - 1].SkypeTime;
             }
@@ -71,11 +98,21 @@ namespace SkypeMagic
 
         public void SendMessageToConv(string msg)
         {
+            for (var i = 0; i < spam.Count; ++i)
+            {
+                if (DateTime.Now - spam[i].Item1 > TimeSpan.FromSeconds(10))
+                {
+                    spam.RemoveAt(i);
+                    --i;
+                }
+            }
+            if (SpamThrottle && spam.Any(t => t.Item2 == msg)) return;
             WithTextBox(textBox =>
             {
-                WinAPI.SendMessage(textBox, WinAPI.WM_SETTEXT, 0, msg);
+                WinAPI.SendMessageW(textBox, WinAPI.WM_SETTEXT, 0, msg);
                 WinAPI.SendMessage(textBox, WinAPI.WM_KEYDOWN, (int)VirtualKeyShort.RETURN, null);
             });
+            spam.Add(Tuple.Create(DateTime.Now, msg));
         }
 
         private void WithTextBox(Action<IntPtr> action)

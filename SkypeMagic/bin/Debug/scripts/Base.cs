@@ -53,11 +53,6 @@ public class Base : Script
         return votes;
     }
 
-    public void Ghci(string[] code)
-    {
-        GHCi.SendCode(Join(code), str => Skype.SendMessageToConv(" " + str));
-    }
-
     public void Links()
     {
         Skype.SendMessageToConv("Zadnjih 10 poslanih linkova:");
@@ -77,7 +72,18 @@ public class Base : Script
 
     public void Raw(Message msg)
     {
-        if (msg.Text.Contains("http") && !msg.Text.StartsWith("[")) Persist.Links.Add(msg);
+        if (msg.Text.Contains("http") && !msg.Text.StartsWith("["))
+        {
+            var link = Regex.Match(msg.Text, "http[^ ]*").Groups[0].Value;
+            var backlog = Persist.Links.Reverse<Message>().Take(20);
+            if (backlog.Any(m => m.Text.Contains(link)))
+            {
+                Skype.SendMessageToConv("Taj link je vec postan:");
+                SendMessageLog(backlog.First(m => m.Text.Contains(link)));
+            }
+            else Persist.Links.Add(msg);
+        }
+        if (msg.Sender == "dito_imamskype" && msg.Text.StartsWith("!ghci")) VoteKick("dito_imamskype");
     }
 
 
