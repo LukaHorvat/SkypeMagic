@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 class Stats : Script
 {
+    [Manual("#ispisuje broj poruka svakog od gacara")]
     public void Count()
     {
         var stats = Persist.Log.Aggregate(new Dictionary<string, int>(), (dict, msg) =>
@@ -19,6 +20,7 @@ class Stats : Script
         }
     }
 
+    [Manual("#graf poruka po satima")]
     public void Hours()
     {
         var count = new int[24];

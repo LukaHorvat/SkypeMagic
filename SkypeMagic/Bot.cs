@@ -54,7 +54,7 @@ namespace SkypeMagic
         public void Recompile(object t, FileSystemEventArgs args)
         {
             var provider = CodeDomProvider.CreateProvider("CSharp");
-            var parameters = new CompilerParameters(new[] { "System.dll", "System.Core.dll", "System.Data.dll", "System.Net.dll", "System.Xml.dll", "System.Xml.Linq.dll", "System.Reflection.Metadata.dll", "SkypeMagic.exe" });
+            var parameters = new CompilerParameters(new[] { "System.dll", "System.Core.dll", "System.Data.dll", "System.Net.dll", "System.Xml.dll", "System.Xml.Linq.dll", "System.Reflection.Metadata.dll", "System.Runtime.dll", "SkypeMagic.exe" });
             parameters.GenerateExecutable = false;
             parameters.GenerateInMemory = true;
 

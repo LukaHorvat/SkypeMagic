@@ -43,9 +43,6 @@
     <Compile Include="..\SkypeMagic\bin\Debug\scripts\Base.cs">
       <Link>Base.cs</Link>
     </Compile>
-    <Compile Include="..\SkypeMagic\bin\Debug\scripts\Correct.cs">
-      <Link>Correct.cs</Link>
-    </Compile>
     <Compile Include="..\SkypeMagic\bin\Debug\scripts\Event.cs">
       <Link>Event.cs</Link>
     </Compile>

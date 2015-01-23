@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 
 class Google : Script
 {
+    [Manual("<pojam> #pretrazi google i daje prvi rezultat")]
     public void Search(string[] terms)
     {
         try
